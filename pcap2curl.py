@@ -6,6 +6,7 @@ from scapy.all import PcapReader, re, Raw, TCP
 
 VALID_METHODS = [
     "GET",
+    b'GET',
     "HEAD",
     "POST",
     "PUT",
@@ -16,27 +17,27 @@ VALID_METHODS = [
     "PATCH"
 ]  # see https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
 
-
 def payload2curl(p):
-    lines = re.compile("[\n\r]+").split(p.decode())
-    start_line = re.search("^([A-Z]+) ([^ ]+) (HTTP\/[0-9\/]+)", lines[0])
+    lines = re.compile(b"[\n\r]+").split(p)
+    start_line = re.search(b"^([A-Z]+) ([^ ]+) (HTTP\/[0-9\/]+)", lines[0])
     method = start_line.group(1)
     url = start_line.group(2)
     version = start_line.group(3)  # Never used
 
     if method not in VALID_METHODS:
+        sys.stderr.write(f'Method not valid: {method}\n')
         return
 
     del lines[0]
     headers = []
     for line in lines:
-        if ":" in line:
+        if b":" in line:
             headers.append("-H '{}'".format(line))
-        if "Host:" in line:
-            host_header = re.search("^Host: (.*)", line)
+        if b"Host:" in line:
+            host_header = re.search(b"^Host: (.*)", line)
             host_name = host_header.group(1)
 
-    proto_host = 'http://{}/'.format(host_name)
+    proto_host = b'http://' + host_name + b'/'
     if not url.startswith(proto_host):
         url = "{}{}".format(proto_host, url[1:] if url[0] == "/" else url)
     curl = "curl '{}' \\\n -X {} \\\n ".format(url, method)
